@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -30,37 +31,40 @@ func main() {
 	flag.Parse()
 
 	if *tokenPtr == "" {
-		fmt.Println("Bot token must be specified.")
+		log.Println("Bot token must be specified.")
 		return
 	}
 
 	setWebhook(*tokenPtr)
 
 	http.HandleFunc("/webhook", webhookHandler)
-	fmt.Println("Starting server at :" + *portPtr)
-	http.ListenAndServe(":"+*portPtr, nil)
+	log.Println("Starting server at :" + *portPtr)
+	err := http.ListenAndServe(":"+*portPtr, nil)
+	if err != nil {
+		log.Printf("Error starting server: %v\n", err)
+	}
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("Error reading request:", err)
+		log.Println("Error reading request:", err)
 		return
 	}
 	defer r.Body.Close()
 
-	fmt.Println(string(bytes))
+	log.Println(string(bytes))
 
 	w.Write([]byte("ok"))
 
 	var update Update
 	err = json.Unmarshal(bytes, &update)
 	if err != nil {
-		fmt.Println("Error parsing update:", err)
+		log.Println("Error parsing update:", err)
 		return
 	}
 
-	response := "Hello! I'm a simple Telegram bot written in Go."
+	response := update.Message.Text
 	sendMessage(update.Message.Chat.Id, response)
 }
 
@@ -74,7 +78,7 @@ func sendMessage(chatId int, text string) {
 
 	_, err := http.PostForm(apiURL, values)
 	if err != nil {
-		fmt.Println("Error sending message:", err)
+		log.Println("Error sending message:", err)
 		return
 	}
 }
@@ -86,9 +90,9 @@ func setWebhook(token string) {
 
 	_, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error setting webhook:", err)
+		log.Println("Error setting webhook:", err)
 		return
 	}
 
-	fmt.Println("Webhook registered successfully.")
+	log.Println("Webhook registered successfully.")
 }
