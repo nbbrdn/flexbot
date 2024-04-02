@@ -1,11 +1,28 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
+
+type Update struct {
+	UpdateId int     `json:"update_id"`
+	Message  Message `json:"message"`
+}
+
+type Message struct {
+	MessageId int    `json:"message_id"`
+	Chat      Chat   `json:"chat"`
+	Text      string `json:"text"`
+}
+
+type Chat struct {
+	Id int `json:"id"`
+}
 
 func main() {
 	tokenPtr := flag.String("token", "", "Telegram bot token")
@@ -34,8 +51,32 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(string(bytes))
 
-	response := "Hi! I am a simple Go bot."
-	w.Write([]byte(response))
+	w.Write([]byte("ok"))
+
+	var update Update
+	err = json.Unmarshal(bytes, &update)
+	if err != nil {
+		fmt.Println("Error parsing update:", err)
+		return
+	}
+
+	response := "Hello! I'm a simple Telegram bot written in Go."
+	sendMessage(update.Message.Chat.Id, response)
+}
+
+func sendMessage(chatId int, text string) {
+	token := flag.Lookup("token").Value.(flag.Getter).Get().(string)
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+
+	values := url.Values{}
+	values.Set("chat_id", fmt.Sprintf("%d", chatId))
+	values.Set("text", text)
+
+	_, err := http.PostForm(apiURL, values)
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return
+	}
 }
 
 func setWebhook(token string) {
