@@ -11,18 +11,18 @@ import (
 )
 
 type Update struct {
-	UpdateId int     `json:"update_id"`
+	UpdateID int     `json:"update_id"`
 	Message  Message `json:"message"`
 }
 
 type Message struct {
-	MessageId int    `json:"message_id"`
+	MessageID int    `json:"message_id"`
 	Chat      Chat   `json:"chat"`
 	Text      string `json:"text"`
 }
 
 type Chat struct {
-	Id int `json:"id"`
+	ID int `json:"id"`
 }
 
 func main() {
@@ -49,31 +49,30 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading request:", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
 	log.Println(string(bytes))
 
-	w.Write([]byte("ok"))
-
 	var update Update
-	err = json.Unmarshal(bytes, &update)
-	if err != nil {
+	if err := json.Unmarshal(bytes, &update); err != nil {
 		log.Println("Error parsing update:", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	response := update.Message.Text
-	sendMessage(update.Message.Chat.Id, response)
+	sendMessage(update.Message.Chat.ID, response)
 }
 
-func sendMessage(chatId int, text string) {
-	token := flag.Lookup("token").Value.(flag.Getter).Get().(string)
+func sendMessage(chatID int, text string) {
+	token := *flag.String("token", "", "Telegram bot token")
 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 
 	values := url.Values{}
-	values.Set("chat_id", fmt.Sprintf("%d", chatId))
+	values.Set("chat_id", fmt.Sprintf("%d", chatID))
 	values.Set("text", text)
 
 	_, err := http.PostForm(apiURL, values)
