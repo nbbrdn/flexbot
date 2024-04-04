@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	token  string
+	config Config
 	logger *log.Logger
 )
 
@@ -47,7 +47,6 @@ type Entity struct {
 }
 
 func main() {
-	var config Config
 	flag.StringVar(&config.Token, "token", "", "Telegram bot token")
 	flag.StringVar(&config.Port, "port", "8080", "Port to listen")
 	flag.Parse()
@@ -108,7 +107,7 @@ func processUpdate(update Update) {
 }
 
 func sendMessage(chatID int, text string) {
-	apiURL := fmt.Sprintf("%s%s/sendMessage", baseURL, token)
+	apiURL := fmt.Sprintf("%s%s/sendMessage", baseURL, config.Token)
 
 	values := url.Values{}
 	values.Set("chat_id", fmt.Sprintf("%d", chatID))
