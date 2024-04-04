@@ -37,7 +37,9 @@ func main() {
 
 	setWebhook(*tokenPtr)
 
-	http.HandleFunc("/webhook", webhookHandler)
+	http.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		webhookHandler(w, r, *tokenPtr)
+	})
 	log.Println("Starting server at :" + *portPtr)
 	err := http.ListenAndServe(":"+*portPtr, nil)
 	if err != nil {
@@ -45,7 +47,7 @@ func main() {
 	}
 }
 
-func webhookHandler(w http.ResponseWriter, r *http.Request) {
+func webhookHandler(w http.ResponseWriter, r *http.Request, token string) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading request:", err)
@@ -64,11 +66,10 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := update.Message.Text
-	sendMessage(update.Message.Chat.ID, response)
+	sendMessage(update.Message.Chat.ID, response, token)
 }
 
-func sendMessage(chatID int, text string) {
-	token := *flag.String("token", "", "Telegram bot token")
+func sendMessage(chatID int, text string, token string) {
 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 
 	values := url.Values{}
