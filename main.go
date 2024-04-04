@@ -8,6 +8,21 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
+)
+
+const (
+  baseURL = "https://api.telegram.org/bot"
+)
+
+var (
+  token string
+  logger *log.Logger
+)
+
+type Config struct (
+  Token string
+  Port string
 )
 
 type Update struct {
@@ -26,51 +41,67 @@ type Chat struct {
 }
 
 func main() {
-	tokenPtr := flag.String("token", "", "Telegram bot token")
-	portPtr := flag.String("port", "8080", "Port to listen")
+  var config Config
+	flag.StringVar(&config.Token, "token", "", "Telegram bot token")
+	flag.StringVar(&config.Port, "port", "8080", "Port to listen")
 	flag.Parse()
 
-	if *tokenPtr == "" {
+	if config.Token == "" {
 		log.Println("Bot token must be specified.")
 		return
 	}
 
-	setWebhook(*tokenPtr)
+  logger = log.New(os.Stdout, "[flexbot] ", log.Ldate|log.Ltime|log.Lshortfile)
 
-	http.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
-		webhookHandler(w, r, *tokenPtr)
-	})
-	log.Println("Starting server at :" + *portPtr)
-	err := http.ListenAndServe(":"+*portPtr, nil)
+	setWebhook(config.Token)
+
+	http.HandleFunc("/webhook", webhookHandler)
+	logger.Println("Starting server at :" + *portPtr)
+	err := http.ListenAndServe(":"+config.Port, nil)
 	if err != nil {
-		log.Printf("Error starting server: %v\n", err)
+		logger.Fatalf("Error starting server: %v\n", err)
 	}
 }
 
-func webhookHandler(w http.ResponseWriter, r *http.Request, token string) {
+func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Error reading request:", err)
+		logger.Println("Error reading request:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
-	log.Println(string(bytes))
+	logger.Println(string(bytes))
 
 	var update Update
 	if err := json.Unmarshal(bytes, &update); err != nil {
-		log.Println("Error parsing update:", err)
+		logger.Println("Error parsing update:", err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	response := update.Message.Text
-	sendMessage(update.Message.Chat.ID, response, token)
+  processUpdate(update)
 }
 
-func sendMessage(chatID int, text string, token string) {
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+func processUpdate(update Update) {
+  message := update.Message.Text
+  chatID := update.Message.Chat.ID
+
+  if strings.HasPrefix(message, "/start") {
+    sendMessage(chatID, "Hi! I'm a bot. Can I help you?")
+  } else if strings.HasPrefix(message, "/stop") {
+    sendMessage(chatID, "Chao! By the way you can write me anytyme...")
+  } else if strings.HasPrefix(message, "/") {
+    sendMessage(chatID, "Unknown command.")
+  } else {
+    sendMessage(chatID, message)
+  }
+}
+
+
+func sendMessage(chatID int, text string) {
+	apiURL := fmt.Sprintf("%s%s/sendMessage", baseURL, token)
 
 	values := url.Values{}
 	values.Set("chat_id", fmt.Sprintf("%d", chatID))
@@ -78,7 +109,7 @@ func sendMessage(chatID int, text string, token string) {
 
 	_, err := http.PostForm(apiURL, values)
 	if err != nil {
-		log.Println("Error sending message:", err)
+		logger.Println("Error sending message:", err)
 		return
 	}
 }
@@ -86,13 +117,13 @@ func sendMessage(chatID int, text string, token string) {
 func setWebhook(token string) {
 	webhookUrl := "https://dev.bayborodin.ru/webhook"
 
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/setWebhook?url=%s", token, webhookUrl)
+	url := fmt.Sprintf("%s%s/setWebhook?url=%s", baseURL, token, webhookUrl)
 
 	_, err := http.Get(url)
 	if err != nil {
-		log.Println("Error setting webhook:", err)
+		logger.Println("Error setting webhook:", err)
 		return
 	}
 
-	log.Println("Webhook registered successfully.")
+	logger.Println("Webhook registered successfully.")
 }
