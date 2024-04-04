@@ -8,22 +8,23 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
 const (
-  baseURL = "https://api.telegram.org/bot"
+	baseURL = "https://api.telegram.org/bot"
 )
 
 var (
-  token string
-  logger *log.Logger
+	token  string
+	logger *log.Logger
 )
 
-type Config struct (
-  Token string
-  Port string
-)
+type Config struct {
+	Token string
+	Port  string
+}
 
 type Update struct {
 	UpdateID int     `json:"update_id"`
@@ -41,7 +42,7 @@ type Chat struct {
 }
 
 func main() {
-  var config Config
+	var config Config
 	flag.StringVar(&config.Token, "token", "", "Telegram bot token")
 	flag.StringVar(&config.Port, "port", "8080", "Port to listen")
 	flag.Parse()
@@ -51,12 +52,12 @@ func main() {
 		return
 	}
 
-  logger = log.New(os.Stdout, "[flexbot] ", log.Ldate|log.Ltime|log.Lshortfile)
+	logger = log.New(os.Stdout, "[flexbot] ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	setWebhook(config.Token)
 
 	http.HandleFunc("/webhook", webhookHandler)
-	logger.Println("Starting server at :" + *portPtr)
+	logger.Println("Starting server at :" + config.Port)
 	err := http.ListenAndServe(":"+config.Port, nil)
 	if err != nil {
 		logger.Fatalf("Error starting server: %v\n", err)
@@ -81,24 +82,23 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  processUpdate(update)
+	processUpdate(update)
 }
 
 func processUpdate(update Update) {
-  message := update.Message.Text
-  chatID := update.Message.Chat.ID
+	message := update.Message.Text
+	chatID := update.Message.Chat.ID
 
-  if strings.HasPrefix(message, "/start") {
-    sendMessage(chatID, "Hi! I'm a bot. Can I help you?")
-  } else if strings.HasPrefix(message, "/stop") {
-    sendMessage(chatID, "Chao! By the way you can write me anytyme...")
-  } else if strings.HasPrefix(message, "/") {
-    sendMessage(chatID, "Unknown command.")
-  } else {
-    sendMessage(chatID, message)
-  }
+	if strings.HasPrefix(message, "/start") {
+		sendMessage(chatID, "Hi! I'm a bot. Can I help you?")
+	} else if strings.HasPrefix(message, "/stop") {
+		sendMessage(chatID, "Chao! By the way you can write me anytyme...")
+	} else if strings.HasPrefix(message, "/") {
+		sendMessage(chatID, "Unknown command.")
+	} else {
+		sendMessage(chatID, message)
+	}
 }
-
 
 func sendMessage(chatID int, text string) {
 	apiURL := fmt.Sprintf("%s%s/sendMessage", baseURL, token)
