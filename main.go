@@ -27,8 +27,9 @@ type Config struct {
 }
 
 type Update struct {
-	UpdateID int     `json:"update_id"`
-	Message  Message `json:"message"`
+	UpdateID int      `json:"update_id"`
+	Message  Message  `json:"message"`
+	Entities []Entity `json:"entities"`
 }
 
 type Message struct {
@@ -39,6 +40,10 @@ type Message struct {
 
 type Chat struct {
 	ID int `json:"id"`
+}
+
+type Entity struct {
+	Type string `json:"type"`
 }
 
 func main() {
@@ -89,12 +94,14 @@ func processUpdate(update Update) {
 	message := update.Message.Text
 	chatID := update.Message.Chat.ID
 
-	if strings.HasPrefix(message, "/start") {
-		sendMessage(chatID, "Hi! I'm a bot. Can I help you?")
-	} else if strings.HasPrefix(message, "/stop") {
-		sendMessage(chatID, "Chao! By the way you can write me anytyme...")
-	} else if strings.HasPrefix(message, "/") {
-		sendMessage(chatID, "Unknown command.")
+	if len(update.Entities) > 0 && update.Entities[0].Type == "bot_command" {
+		if strings.HasPrefix(message, "/start") {
+			sendMessage(chatID, "Hello! I'm a bot...")
+		} else if strings.HasPrefix(message, "/stop") {
+			sendMessage(chatID, "Chao!")
+		} else {
+			sendMessage(chatID, "Unknown command.")
+		}
 	} else {
 		sendMessage(chatID, message)
 	}
