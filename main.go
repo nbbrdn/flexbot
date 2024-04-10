@@ -50,9 +50,9 @@ func main() {
 	flag.StringVar(&config.Token, "token", "", "Telegram bot token")
 	flag.StringVar(&config.Port, "port", "8080", "Port to listen")
 	flag.Parse()
-
 	if config.Token == "" {
 		log.Println("Bot token must be specified.")
+		log.Printf("123")
 		return
 	}
 
@@ -124,7 +124,6 @@ func setWebhook(token string) {
 	webhookUrl := "https://dev.bayborodin.ru/webhook"
 
 	url := fmt.Sprintf("%s%s/setWebhook?url=%s", baseURL, token, webhookUrl)
-
 	_, err := http.Get(url)
 	if err != nil {
 		logger.Println("Error setting webhook:", err)
